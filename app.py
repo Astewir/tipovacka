@@ -40,7 +40,7 @@ def get_gspread_client():
 @st.cache_data(ttl=60)
 def load_data_frames():
     client = get_gspread_client()
-    sh = client.open("MS2026_Tipovacka Palatínus Family")
+    sh = client.open("MS2026_Tipovacka")
     return pd.DataFrame(sh.worksheet("Zápasy").get_all_records()), \
            pd.DataFrame(sh.worksheet("Uživatelé").get_all_records()), \
            pd.DataFrame(sh.worksheet("Tipy").get_all_records())
