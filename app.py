@@ -95,7 +95,6 @@ st.title("⚽ MS 2026 ")
 col_main, col_side = st.columns([2.5, 1])
 
 with col_main:
-    st.subheader("🗓️ Program zápasů")
     last_date = None
     for _, zapas in df_zapas.iterrows():
         if zapas['Datum'] != last_date:
