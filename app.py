@@ -76,7 +76,7 @@ if not df_tipy.empty and 'Skore_D' in df_zapas.columns:
     df_tipy['Body'] = df_tipy.apply(calc_body, axis=1)
 
 # --- UI ---
-st.title("⚽ MS 2026 ")
+st.title("⚽ MS 2026 Palatínus Family ")
 col_main, col_side = st.columns([2.5, 1])
 
 with col_main:
