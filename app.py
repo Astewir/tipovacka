@@ -59,11 +59,24 @@ def calc_body(row):
        (int(row['Tip_D']) == int(row['Tip_H']) and int(z['Skore_D']) == int(z['Skore_H'])): return 1
     return 0
 
+def get_user_color(name):
+    # Můžeš si definovat vlastní barvy pro konkrétní lidi
+    color_map = {
+        "Vojtin": "#FF5733",
+        "Terezka": "#33FF57"
+    }
+    # Pokud jméno není v mapě, vygeneruje se barva z jména (vždy stejná pro stejné jméno)
+    if name not in color_map:
+        import hashlib
+        hash_val = int(hashlib.md5(name.encode()).hexdigest(), 16)
+        return f"#{hash_val % 0xFFFFFF:06x}"
+    return color_map[name]
+
 if not df_tipy.empty and 'Skore_D' in df_zapas.columns:
     df_tipy['Body'] = df_tipy.apply(calc_body, axis=1)
 
 # --- UI ---
-st.title("⚽ MS 2026 - Tipovačka")
+st.title("⚽ MS 2026 ")
 col_main, col_side = st.columns([2.5, 1])
 
 with col_main:
@@ -104,11 +117,32 @@ with col_main:
                             else: ws.append_row([user, zapas['ID'], td, th])
                             st.cache_data.clear(); st.rerun()
             with c2:
-                st.markdown("<div style='color: #aaa; font-size: 0.9em; margin-bottom: 10px;'>👥 Tipy ostatních</div>", unsafe_allow_html=True)
+                st.markdown("<h5 style='margin-bottom: 15px;'>👥 Tipy ostatních</h5>", unsafe_allow_html=True)
                 tipy = df_tipy[df_tipy['ID_Zapasu'] == zapas['ID']]
-                for _, tip in tipy.iterrows():
-                    st.markdown(f"<div style='background:#262730; padding:5px; margin-bottom:3px; border-left:3px solid #4CAF50; color: #ddd;'>{tip['Jméno']}: <b>{tip['Tip_D']}:{tip['Tip_H']}</b></div>", unsafe_allow_html=True)
-
+                
+                if tipy.empty:
+                    st.caption("Zatím žádné tipy.")
+                else:
+                    for _, tip in tipy.iterrows():
+                        user_color = get_user_color(tip['Jméno'])
+                        st.markdown(f"""
+                        <div style="
+                            background-color: #262730; 
+                            padding: 10px 15px; 
+                            margin-bottom: 8px; 
+                            border-radius: 10px; 
+                            border-left: 4px solid {user_color};
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+                        ">
+                            <span style="font-weight: 500; color: {user_color};">{tip['Jméno']}</span>
+                            <span style="font-family: monospace; font-size: 1.1em; font-weight: bold; color: #ffffff;">
+                                {tip['Tip_D']} : {tip['Tip_H']}
+                            </span>
+                        </div>
+                        """, unsafe_allow_html=True)
 with col_side:
     st.subheader("🏆 Pořadí")
     if 'Body' in df_tipy.columns:
