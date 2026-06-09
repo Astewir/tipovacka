@@ -8,15 +8,28 @@ st.set_page_config(layout="centered")
 
 st.markdown("""
     <style>
+    /* Globální tmavý mód */
+    .stApp { background-color: #121212; color: #e0e0e0; }
+    
+    /* Úprava textů a nadpisů */
+    h1, h2, h3, div, p { color: #e0e0e0 !important; }
+    
     .block-container { max-width: 1100px !important; padding: 2rem !important; }
+    
+    /* Expander a vstupy */
     .stExpander { border: 1px solid #333 !important; margin-top: -5px !important; border-radius: 0 0 8px 8px !important; }
-    .stExpanderContent { background-color: #161616; padding: 20px !important; }
-    .score-box { font-size: 20px; font-weight: bold; color: #4CAF50; text-align: center; padding: 10px; border: 2px solid #4CAF50; }
+    .stExpanderContent { background-color: #1a1a1a !important; padding: 20px !important; }
+    
+    .score-box { font-size: 20px; font-weight: bold; color: #4CAF50; text-align: center; padding: 10px; border: 2px solid #4CAF50; background: #121212; }
+    
     /* Leaderboard styly */
-    .lb-row { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #333; }
+    .lb-row { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #333; color: #e0e0e0; }
     .lb-rank { font-size: 20px; font-weight: bold; width: 40px; }
     .lb-name { flex-grow: 1; font-weight: 500; }
     .lb-points { font-weight: bold; color: #4CAF50; }
+    
+    /* Úprava vstupních polí a selectboxu pro tmavé pozadí */
+    .stSelectbox, .stNumberInput { color: #e0e0e0 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -58,7 +71,7 @@ with col_main:
     last_date = None
     for _, zapas in df_zapas.iterrows():
         if zapas['Datum'] != last_date:
-            st.markdown(f'<div style="text-align: center; margin: 30px 0 20px 0; color: #4CAF50; font-weight: bold; display: flex; align-items: center;"><div style="flex: 1; height: 1px; background: #333;"></div><div style="padding: 0 15px;">{zapas["Datum"]}</div><div style="flex: 1; height: 1px; background: #333;"></div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align: center; margin: 30px 0 20px 0; color: #4CAF50; font-weight: bold; display: flex; align-items: center;"><div style="flex: 1; height: 1px; background: #444;"></div><div style="padding: 0 15px; color: #aaa;">{zapas["Datum"]}</div><div style="flex: 1; height: 1px; background: #444;"></div></div>', unsafe_allow_html=True)
             last_date = zapas['Datum']
 
         is_closed = zapas['DateTime'] < datetime.now()
@@ -66,7 +79,7 @@ with col_main:
         middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>' if (is_closed and str(zapas.get('Skore_D', '')).strip() != "") else f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
         
         st.markdown(f"""
-        <div style="background-color: #1f1f1f; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; display: flex; justify-content: space-between; align-items: center; color: white; margin-top: 15px;">
+        <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; display: flex; justify-content: space-between; align-items: center; color: white; margin-top: 15px;">
             <div style="width: 35%; text-align: left; font-weight:bold;">{zapas['Domaci']}</div>
             <div style="width: 30%; text-align: center;">{middle_content}</div>
             <div style="width: 35%; text-align: right; font-weight:bold;">{zapas['Hoste']}</div>
@@ -91,9 +104,10 @@ with col_main:
                             else: ws.append_row([user, zapas['ID'], td, th])
                             st.cache_data.clear(); st.rerun()
             with c2:
+                st.markdown("<div style='color: #aaa; font-size: 0.9em; margin-bottom: 10px;'>👥 Tipy ostatních</div>", unsafe_allow_html=True)
                 tipy = df_tipy[df_tipy['ID_Zapasu'] == zapas['ID']]
                 for _, tip in tipy.iterrows():
-                    st.markdown(f"<div style='background:#262730; padding:5px; margin-bottom:3px; border-left:3px solid #4CAF50;'>{tip['Jméno']}: <b>{tip['Tip_D']}:{tip['Tip_H']}</b></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='background:#262730; padding:5px; margin-bottom:3px; border-left:3px solid #4CAF50; color: #ddd;'>{tip['Jméno']}: <b>{tip['Tip_D']}:{tip['Tip_H']}</b></div>", unsafe_allow_html=True)
 
 with col_side:
     st.subheader("🏆 Pořadí")
