@@ -83,15 +83,26 @@ def calc_body(row):
     z = df_zapas[df_zapas['ID'] == row['ID_Zapasu']]
     if z.empty: return 0
     z = z.iloc[0]
+    
     body = 0
+    
+    # 1. Body za výsledek zápasu
     if not pd.isna(z['Skore_D']) and str(z['Skore_D']) != "":
-        if int(row['Tip_D']) == int(z['Skore_D']) and int(row['Tip_H']) == int(z['Skore_H']): body += 3
+        # 3 body za přesný výsledek
+        if int(row['Tip_D']) == int(z['Skore_D']) and int(row['Tip_H']) == int(z['Skore_H']):
+            body += 3
+        # 1 bod za správný tip vítěze nebo remízu
         elif (int(row['Tip_D']) > int(row['Tip_H']) and int(z['Skore_D']) > int(z['Skore_H'])) or \
              (int(row['Tip_D']) < int(row['Tip_H']) and int(z['Skore_D']) < int(z['Skore_H'])) or \
-             (int(row['Tip_D']) == int(row['Tip_H']) and int(z['Skore_D']) == int(z['Skore_H'])): body += 1
+             (int(row['Tip_D']) == int(row['Tip_H']) and int(z['Skore_D']) == int(z['Skore_H'])):
+            body += 1
+            
+    # 2. Samostatný bod za střelce (přičte se vždy, pokud je správně, bez ohledu na výsledek)
     if "Střelec" in z and not pd.isna(z['Střelec']) and z['Střelec'] != "":
         skutecni_strelci = [remove_accents(s) for s in str(z['Střelec']).split(",")]
-        if remove_accents(str(row.get('Střelec', ''))) in skutecni_strelci: body += 1
+        if remove_accents(str(row.get('Střelec', ''))) in skutecni_strelci:
+            body += 1
+            
     return body
 
 if not df_tipy.empty and 'Skore_D' in df_zapas.columns:
