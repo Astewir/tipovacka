@@ -65,12 +65,27 @@ def calc_body(row):
     z = df_zapas[df_zapas['ID'] == row['ID_Zapasu']]
     if z.empty: return 0
     z = z.iloc[0]
-    if pd.isna(z['Skore_D']) or str(z['Skore_D']) == "": return 0
-    if int(row['Tip_D']) == int(z['Skore_D']) and int(row['Tip_H']) == int(z['Skore_H']): return 3
-    if (int(row['Tip_D']) > int(row['Tip_H']) and int(z['Skore_D']) > int(z['Skore_H'])) or \
-       (int(row['Tip_D']) < int(row['Tip_H']) and int(z['Skore_D']) < int(z['Skore_H'])) or \
-       (int(row['Tip_D']) == int(row['Tip_H']) and int(z['Skore_D']) == int(z['Skore_H'])): return 1
-    return 0
+    
+    body = 0
+    
+    # 1. Body za výsledek (3b přesně, 1b vítěz/remíza)
+    if not pd.isna(z['Skore_D']) and str(z['Skore_D']) != "":
+        if int(row['Tip_D']) == int(z['Skore_D']) and int(row['Tip_H']) == int(z['Skore_H']):
+            body += 3
+        elif (int(row['Tip_D']) > int(row['Tip_H']) and int(z['Skore_D']) > int(z['Skore_H'])) or \
+             (int(row['Tip_D']) < int(row['Tip_H']) and int(z['Skore_D']) < int(z['Skore_H'])) or \
+             (int(row['Tip_D']) == int(row['Tip_H']) and int(z['Skore_D']) == int(z['Skore_H'])):
+            body += 1
+            
+    # 2. Bod za střelce (pokud je tipnutý střelec v seznamu střelců zápasu)
+    if "Střelec" in z and not pd.isna(z['Střelec']) and z['Střelec'] != "":
+        # Rozdělíme seznam střelců z tabulky podle čárky
+        skutecni_strelci = [s.strip() for s in str(z['Střelec']).split(",")]
+        # Zkontrolujeme, zda tip hráče odpovídá některému ze střelců
+        if str(row.get('Střelec', '')) in skutecni_strelci:
+            body += 1
+            
+    return body
 
 if not df_tipy.empty and 'Skore_D' in df_zapas.columns:
     df_tipy['Body'] = df_tipy.apply(calc_body, axis=1)
@@ -91,11 +106,17 @@ with col_main:
         border_color = "#e74c3c" if is_closed else "#2ecc71"
         middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>' if (is_closed and str(zapas.get('Skore_D', '')).strip() != "") else f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
         
+        strelci_zapas = str(zapas.get("Střelec", "")).replace(",", ", ")
+        strel_info = f'<div style="font-size: 0.85em; color: #4CAF50; margin-top: 5px;">⚽ Střelci zápasu: <b>{strelci_zapas}</b></div>' if (is_closed and "Střelec" in zapas and zapas["Střelec"]) else ""
+
         st.markdown(f"""
-        <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; display: flex; justify-content: space-between; align-items: center; color: white; margin-top: 15px;">
-            <div style="width: 40%; text-align: left; font-weight:bold; font-size: 1.1em;">{get_flag_html(zapas['Domaci'])} {zapas['Domaci']}</div>
-            <div style="width: 20%; text-align: center;">{middle_content}</div>
-            <div style="width: 40%; text-align: right; font-weight:bold; font-size: 1.1em;">{zapas['Hoste']} {get_flag_html(zapas['Hoste'])}</div>
+        <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; color: white; margin-top: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="width: 40%; text-align: left; font-weight:bold; font-size: 1.1em;">{get_flag_html(zapas['Domaci'])} {zapas['Domaci']}</div>
+                <div style="width: 20%; text-align: center;">{middle_content}</div>
+                <div style="width: 40%; text-align: right; font-weight:bold; font-size: 1.1em;">{zapas['Hoste']} {get_flag_html(zapas['Hoste'])}</div>
+            </div>
+            {strel_info}
         </div>
         """, unsafe_allow_html=True)
         
@@ -124,13 +145,14 @@ with col_main:
                 st.markdown("<h5 style='margin-bottom: 15px;'>👥 Tipy ostatních</h5>", unsafe_allow_html=True)
                 for _, tip in df_tipy[df_tipy['ID_Zapasu'] == zapas['ID']].iterrows():
                     user_color = get_user_color(tip['Jméno'])
+                    tip_strelec = str(tip.get('Střelec', 'Nezadáno')).replace(",", ", ")
                     st.markdown(f"""
                     <div style="background-color: #262730; padding: 10px 15px; margin-bottom: 8px; border-radius: 10px; border-left: 4px solid {user_color};">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-weight: 500; color: {user_color};">{tip['Jméno']}</span>
                             <span style="font-family: monospace; font-size: 1.1em; font-weight: bold; color: #ffffff;">{tip['Tip_D']} : {tip['Tip_H']}</span>
                         </div>
-                        <div style="font-size: 0.8em; color: #aaa; margin-top: 5px;">⚽ Střelec: {tip.get('Střelec', 'Nezadáno')}</div>
+                        <div style="font-size: 0.8em; color: #aaa; margin-top: 5px;">⚽ Střelec: {tip_strelec}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
