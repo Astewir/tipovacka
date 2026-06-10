@@ -126,7 +126,7 @@ st.markdown(f"""
         border-radius: 12px; 
         border: 1px solid #333; 
         margin: 0 auto 20px auto; 
-        max-width: 600px; 
+        max-width: 1100px; 
         text-align: center;
         box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
         <h2 style="margin: 0; color: #4CAF50 !important;">Tipovačka MS 2026 🏆</h2>
