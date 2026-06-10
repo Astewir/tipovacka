@@ -119,7 +119,19 @@ if not df_tipy.empty and 'Skore_D' in df_zapas.columns:
     df_tipy['Body'] = df_tipy.apply(calc_body, axis=1)
 
 # --- UI ---
-st.title("⚽ MS 2026 ")
+st.markdown(f"""
+    <div style="
+        background: #1a1a1a; 
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 1px solid #333; 
+        margin: 0 auto 20px auto; 
+        max-width: 600px; 
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+        <h2 style="margin: 0; color: #4CAF50 !important;">Tipovačka MS 2026 🏆</h2>
+    </div>
+""", unsafe_allow_html=True)
 
 with st.popover("📊"):
     st.subheader("🏆 Aktuální pořadí")
@@ -180,7 +192,10 @@ with col_main:
                             exist = df_tipy[(df_tipy['ID_Zapasu'] == zapas['ID']) & (df_tipy['Jméno'] == user)]
                             if not exist.empty: ws.update(f"C{exist.index[0]+2}:E{exist.index[0]+2}", [[td, th, ciste_jmeno]])
                             else: ws.append_row([user, zapas['ID'], td, th, ciste_jmeno])
-                            st.cache_data.clear(); st.rerun()
+                            st.balloons() # Tohle udělá v aplikaci animaci balónků – to rodinnou atmosféru vždycky zvedne!
+                            st.success(f"Tip pro {user} uložen! Hodně štěstí!")
+                            st.cache_data.clear()
+                            st.rerun()
             with c2:
                 st.markdown("<h5 style='margin-bottom: 15px;'>👥 Tipy ostatních</h5>", unsafe_allow_html=True)
                 for _, tip in df_tipy[df_tipy['ID_Zapasu'] == zapas['ID']].iterrows():
