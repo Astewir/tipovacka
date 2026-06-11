@@ -79,12 +79,14 @@ def get_user_color(name):
 def load_data_frames():
     client = get_gspread_client()
     sh = client.open("MS2026_Tipovacka")
-    st.write(f"Server čas: {datetime.now()}")
-    st.write(f"Praha čas: {get_current_time()}")
+    
     return pd.DataFrame(sh.worksheet("Zápasy").get_all_records()), \
             pd.DataFrame(sh.worksheet("Uživatelé").get_all_records()), \
             pd.DataFrame(sh.worksheet("Tipy").get_all_records()), \
             pd.DataFrame(sh.worksheet("Soupisky").get_all_records())
+
+st.write(f"Server čas: {datetime.now()}")
+st.write(f"Praha čas: {get_current_time()}")
 
 df_zapas, df_uzivatele, df_tipy, df_soupisky = load_data_frames()
 df_zapas['DateTime'] = pd.to_datetime(df_zapas['Datum'] + ' ' + df_zapas['Cas'], format='%d.%m.%Y %H:%M')
