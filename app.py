@@ -160,8 +160,9 @@ with col_main:
             st.markdown(f'<div style="text-align: center; margin: 30px 0 20px 0; color: #4CAF50; font-weight: bold; display: flex; align-items: center;"><div style="flex: 1; height: 1px; background: #444;"></div><div style="padding: 0 15px; color: #aaa;">{zapas["Datum"]}</div><div style="flex: 1; height: 1px; background: #444;"></div></div>', unsafe_allow_html=True)
             last_date = zapas['Datum']
         
-       # 1. Čas
-        aktualni_cas = datetime.now() 
+       # 1. Čas s ošetřením časové zóny (posun na ČR čas)
+        # datetime.utcnow() je čas serveru, + 2 hodiny dává náš letní čas
+        aktualni_cas = datetime.utcnow() + timedelta(hours=2)
         zapas_dt = pd.to_datetime(zapas['DateTime'])
         is_closed = aktualni_cas > zapas_dt
 
