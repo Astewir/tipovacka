@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 import hashlib
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz  # Přidejte tento import
 
 # --- KONFIGURACE ---
@@ -154,22 +154,33 @@ col_main, col_side = st.columns([2.5, 1])
 
 with col_main:
     last_date = None
+    df_zapas['DateTime'] = pd.to_datetime(df_zapas['DateTime'])
     for _, zapas in df_zapas.iterrows():
         if zapas['Datum'] != last_date:
             st.markdown(f'<div style="text-align: center; margin: 30px 0 20px 0; color: #4CAF50; font-weight: bold; display: flex; align-items: center;"><div style="flex: 1; height: 1px; background: #444;"></div><div style="padding: 0 15px; color: #aaa;">{zapas["Datum"]}</div><div style="flex: 1; height: 1px; background: #444;"></div></div>', unsafe_allow_html=True)
             last_date = zapas['Datum']
         
-        # Definice času
-        current_time = get_current_time()
-        is_closed = zapas['DateTime'] < current_time
+       # --- Zde je absolutní oprava ---
+        # Aktuální čas v ČR (UTC+2) - teď je 21:35
+        aktualni_cas = datetime.now() 
         
-        # Logika pro zobrazení obsahu uprostřed
-        skore_zadane = str(zapas.get('Skore_D', '')).strip() != "" and str(zapas.get('Skore_H', '')).strip() != ""
+        # Převedeme čas zápasu na datetime objekt
+        # Pokud je v tabulce "11.6.2026 21:00", tohle ho správně identifikuje
+        zapas_dt = pd.to_datetime(zapas['DateTime'])
         
+        # Zápas je uzavřen, pokud je aktuální čas větší než čas zápasu
+        # Přidáme malou rezervu (např. 1 minuta), aby se to nezavřelo dřív
+        is_closed = aktualni_cas > zapas_dt
+
+        # Logika pro zobrazení
+        skore_zadane = str(zapas.get('Skore_D', '')).strip() not in ["", "0", "None", "nan"] 
+        # (Přidal jsem kontrolu "0", protože pokud skóre teprve vyplňuješ, 
+        # může tam být nula, kterou nechceme brát jako výsledek)
+
         if is_closed and skore_zadane:
             middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>'
-        elif is_closed and not skore_zadane:
-            middle_content = f'<div style="font-size:14px; font-weight:bold; color:#FFD700; text-transform: uppercase;">PRÁVĚ SE HRAJE</div>'
+        elif is_closed:
+            middle_content = f'<div style="font-size:12px; font-weight:bold; color:#FFD700; text-transform: uppercase;">PRÁVĚ SE HRAJE</div>'
         else:
             middle_content = f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
 
@@ -217,12 +228,21 @@ with col_main:
                         vyber_strelec = st.selectbox("Tip na střelce:", moznosti, key=f"s_{zapas['ID']}")
                         
                         if st.form_submit_button("ULOŽIT TIP"):
-                            ciste_jmeno = vyber_strelec[vyber_strelec.find(")")+2:] if ")" in vyber_strelec else vyber_strelec
+                            # LOGIKA: Pokud je výsledek 0:0, střelec bude prázdný
+                            if td == 0 and th == 0:
+                                ciste_jmeno = ""
+                            else:
+                                ciste_jmeno = vyber_strelec[vyber_strelec.find(")")+2:] if ")" in vyber_strelec else vyber_strelec
+                            
                             ws = get_gspread_client().open("MS2026_Tipovacka").worksheet("Tipy")
                             exist = df_tipy[(df_tipy['ID_Zapasu'] == zapas['ID']) & (df_tipy['Jméno'] == user)]
-                            if not exist.empty: ws.update(f"C{exist.index[0]+2}:E{exist.index[0]+2}", [[td, th, ciste_jmeno]])
-                            else: ws.append_row([user, zapas['ID'], td, th, ciste_jmeno])
-                            st.balloons() # Tohle udělá v aplikaci animaci balónků – to rodinnou atmosféru vždycky zvedne!
+                            
+                            if not exist.empty: 
+                                ws.update(f"C{exist.index[0]+2}:E{exist.index[0]+2}", [[td, th, ciste_jmeno]])
+                            else: 
+                                ws.append_row([user, zapas['ID'], td, th, ciste_jmeno])
+                            
+                            st.balloons()
                             st.success(f"Tip pro {user} uložen! Hodně štěstí!")
                             st.cache_data.clear()
                             st.rerun()
