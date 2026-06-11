@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import datetime
 import hashlib
 import unicodedata
+from datetime import datetime
+import pytz  # Přidejte tento import
 
 # --- KONFIGURACE ---
 st.set_page_config(layout="wide")
@@ -28,6 +30,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- FUNKCE ---
+def get_current_time():
+    # Nastaví Pražskou časovou zónu
+    prague_tz = pytz.timezone('Europe/Prague')
+    return datetime.now(prague_tz).replace(tzinfo=None) # .replace odstraní zónu pro snadné porovnání
+
 def remove_accents(input_str):
     if not isinstance(input_str, str): return ""
     nfkd_form = unicodedata.normalize('NFKD', input_str)
@@ -151,9 +158,8 @@ with col_main:
             last_date = zapas['Datum']
         
         # Definice času
-        zapas_time = pd.to_datetime(zapas['DateTime'])
-        current_time = datetime.now()
-        is_closed = zapas_time < current_time
+        current_time = get_current_time()
+        is_closed = zapas['DateTime'] < current_time
         
         # Logika pro zobrazení obsahu uprostřed
         skore_zadane = str(zapas.get('Skore_D', '')).strip() != "" and str(zapas.get('Skore_H', '')).strip() != ""
