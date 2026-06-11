@@ -85,8 +85,6 @@ def load_data_frames():
             pd.DataFrame(sh.worksheet("Tipy").get_all_records()), \
             pd.DataFrame(sh.worksheet("Soupisky").get_all_records())
 
-st.write(f"Server čas: {datetime.now()}")
-st.write(f"Praha čas: {get_current_time()}")
 
 df_zapas, df_uzivatele, df_tipy, df_soupisky = load_data_frames()
 df_zapas['DateTime'] = pd.to_datetime(df_zapas['Datum'] + ' ' + df_zapas['Cas'], format='%d.%m.%Y %H:%M')
