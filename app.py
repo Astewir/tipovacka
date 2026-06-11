@@ -150,18 +150,40 @@ with col_main:
             st.markdown(f'<div style="text-align: center; margin: 30px 0 20px 0; color: #4CAF50; font-weight: bold; display: flex; align-items: center;"><div style="flex: 1; height: 1px; background: #444;"></div><div style="padding: 0 15px; color: #aaa;">{zapas["Datum"]}</div><div style="flex: 1; height: 1px; background: #444;"></div></div>', unsafe_allow_html=True)
             last_date = zapas['Datum']
         
-        is_closed = zapas['DateTime'] < datetime.now()
+        # Definice času
+        zapas_time = pd.to_datetime(zapas['DateTime'])
+        current_time = datetime.now()
+        is_closed = zapas_time < current_time
+        
+        # Logika pro zobrazení obsahu uprostřed
+        skore_zadane = str(zapas.get('Skore_D', '')).strip() != "" and str(zapas.get('Skore_H', '')).strip() != ""
+        
+        if is_closed and skore_zadane:
+            middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>'
+        elif is_closed and not skore_zadane:
+            middle_content = f'<div style="font-size:14px; font-weight:bold; color:#FFD700; text-transform: uppercase;">PRÁVĚ SE HRAJE</div>'
+        else:
+            middle_content = f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
+
+        # Zbytek kódu pro barvy a vykreslení zůstává...
         border_color = "#e74c3c" if is_closed else "#2ecc71"
+        bg_color = "#1a0a0a" if is_closed else "#1e1e1e"
+        
         middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>' if (is_closed and str(zapas.get('Skore_D', '')).strip() != "") else f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
         strelci_zapas = str(zapas.get("Střelec", "")).replace(",", ", ")
         strel_info = f'<div style="font-size: 0.85em; color: #4CAF50; margin-top: 5px;">⚽ Střelci zápasu: <b>{strelci_zapas}</b></div>' if (is_closed and "Střelec" in zapas and zapas["Střelec"]) else ""
         
-        st.markdown(f"""<div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; color: white; margin-top: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="width: 40%; text-align: left; font-weight:bold; font-size: 1.1em;">{get_flag_html(zapas['Domaci'])} {zapas['Domaci']}</div>
-                <div style="width: 20%; text-align: center;">{middle_content}</div>
-                <div style="width: 40%; text-align: right; font-weight:bold; font-size: 1.1em;">{zapas['Hoste']} {get_flag_html(zapas['Hoste'])}</div>
-            </div>{strel_info}</div>""", unsafe_allow_html=True)
+        # Vykreslení karty
+        st.markdown(f"""
+            <div style="background-color: {bg_color}; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; color: white; margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="width: 40%; text-align: left; font-weight:bold; font-size: 1.1em;">{get_flag_html(zapas['Domaci'])} {zapas['Domaci']}</div>
+                    <div style="width: 20%; text-align: center;">{middle_content}</div>
+                    <div style="width: 40%; text-align: right; font-weight:bold; font-size: 1.1em;">{zapas['Hoste']} {get_flag_html(zapas['Hoste'])}</div>
+                </div>
+                {strel_info}
+            </div>
+        """, unsafe_allow_html=True)
         
         with st.expander("Detaily a tipy"):
             c1, c2 = st.columns(2)
