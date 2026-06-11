@@ -110,11 +110,19 @@ def get_pozice_label(row):
     return p
 
 def calc_body(row):
+    # Najdeme odpovídající zápas
     z = df_zapas[df_zapas['ID'] == row['ID_Zapasu']]
     if z.empty: return 0
     z = z.iloc[0]
-    body = 0
     
+    # 1. KONTROLA UZAVŘENÍ: Pokud není vyplněné skóre, zápas se nepočítá
+    skore_d_raw = str(z.get('Skore_D', ''))
+    skore_h_raw = str(z.get('Skore_H', ''))
+    
+    # Pokud je skóre prázdné nebo "nan", zápas není uzavřený -> 0 bodů
+    if skore_d_raw.strip() in ["", "nan", "None"] or skore_h_raw.strip() in ["", "nan", "None"]:
+        return 0
+
     # Funkce pro bezpečný převod na int
     def safe_int(val):
         try:
@@ -123,31 +131,46 @@ def calc_body(row):
             return 0
 
     # Načtení hodnot
-    skore_d = safe_int(z.get('Skore_D'))
-    skore_h = safe_int(z.get('Skore_H'))
+    skore_d = safe_int(skore_d_raw)
+    skore_h = safe_int(skore_h_raw)
     tip_d = safe_int(row.get('Tip_D'))
     tip_h = safe_int(row.get('Tip_H'))
     
-    # 1. Body za výsledek
-    if str(z.get('Skore_D', '')) != "":
-        # Přesný zásah (3 body)
-        if tip_d == skore_d and tip_h == skore_h:
-            body += 3
-            # Bonusový bod za 0:0
-            if skore_d == 0 and skore_h == 0:
-                body += 1
-        # Správný tip (výhra/remíza) (1 bod)
-        elif (tip_d > tip_h and skore_d > skore_h) or \
-             (tip_d < tip_h and skore_d < skore_h) or \
-             (tip_d == tip_h and skore_d == skore_h):
+    body = 0
+    
+    # 2. Bodování výsledku
+    trefen_presny = (tip_d == skore_d and tip_h == skore_h)
+    trefen_nepresny = (
+        (tip_d > tip_h and skore_d > skore_h) or 
+        (tip_d < tip_h and skore_d < skore_h) or 
+        (tip_d == tip_h and skore_d == skore_h)
+    )
+    
+    if trefen_presny:
+        body += 3
+        if skore_d == 0 and skore_h == 0:
             body += 1
-            
-    # 2. Body za střelce (počítá se pouze pokud není 0:0)
+    elif trefen_nepresny:
+        body += 1
+        
+    # 3. Bodování střelce
+    # 3. Bodování střelce
     je_vysledek_00 = (skore_d == 0 and skore_h == 0)
-    if not je_vysledek_00 and "Střelec" in z and not pd.isna(z['Střelec']) and z['Střelec'] != "":
-        skutecni_strelci = [remove_accents(s) for s in str(z['Střelec']).split(",")]
-        tipovany_strelec = remove_accents(str(row.get('Střelec', '')))
-        if tipovany_strelec != "" and tipovany_strelec in skutecni_strelci: 
+    
+    if not je_vysledek_00 and "Střelec" in z and not pd.isna(z['Střelec']) and str(z['Střelec']).strip() != "":
+        # Seznam střelců z tabulky
+        skutecni_strelci = [remove_accents(s.strip()) for s in str(z['Střelec']).split(",")]
+        
+        # OČIŠTĚNÍ TIPU: Odstraníme vše od první závorky včetně
+        surovy_tip = str(row.get('Střelec', ''))
+        if "(" in surovy_tip:
+            surovy_tip = surovy_tip.split("(")[0] # Vezme jen část před závorkou
+        
+        tipovany_strelec = remove_accents(surovy_tip.strip())
+        
+        # DEBUG: st.write(f"DEBUG: Tip '{tipovany_strelec}' vs Střelci {skutecni_strelci}")
+        
+        if tipovany_strelec != "" and tipovany_strelec in skutecni_strelci:
             body += 1
             
     return body
