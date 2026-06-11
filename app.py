@@ -160,23 +160,14 @@ with col_main:
             st.markdown(f'<div style="text-align: center; margin: 30px 0 20px 0; color: #4CAF50; font-weight: bold; display: flex; align-items: center;"><div style="flex: 1; height: 1px; background: #444;"></div><div style="padding: 0 15px; color: #aaa;">{zapas["Datum"]}</div><div style="flex: 1; height: 1px; background: #444;"></div></div>', unsafe_allow_html=True)
             last_date = zapas['Datum']
         
-       # --- Zde je absolutní oprava ---
-        # Aktuální čas v ČR (UTC+2) - teď je 21:35
+       # 1. Čas
         aktualni_cas = datetime.now() 
-        
-        # Převedeme čas zápasu na datetime objekt
-        # Pokud je v tabulce "11.6.2026 21:00", tohle ho správně identifikuje
         zapas_dt = pd.to_datetime(zapas['DateTime'])
-        
-        # Zápas je uzavřen, pokud je aktuální čas větší než čas zápasu
-        # Přidáme malou rezervu (např. 1 minuta), aby se to nezavřelo dřív
         is_closed = aktualni_cas > zapas_dt
 
-        # Logika pro zobrazení
-        skore_zadane = str(zapas.get('Skore_D', '')).strip() not in ["", "0", "None", "nan"] 
-        # (Přidal jsem kontrolu "0", protože pokud skóre teprve vyplňuješ, 
-        # může tam být nula, kterou nechceme brát jako výsledek)
-
+        # 2. Logika pro prostřední obsah
+        skore_zadane = str(zapas.get('Skore_D', '')).strip() not in ["", "0", "None", "nan", 0]
+        
         if is_closed and skore_zadane:
             middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>'
         elif is_closed:
@@ -184,25 +175,24 @@ with col_main:
         else:
             middle_content = f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
 
-        # Zbytek kódu pro barvy a vykreslení zůstává...
+        # 3. Barvy a vykreslení
         border_color = "#e74c3c" if is_closed else "#2ecc71"
         bg_color = "#1a0a0a" if is_closed else "#1e1e1e"
         
-        middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>' if (is_closed and str(zapas.get('Skore_D', '')).strip() != "") else f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
         strelci_zapas = str(zapas.get("Střelec", "")).replace(",", ", ")
-        strel_info = f'<div style="font-size: 0.85em; color: #4CAF50; margin-top: 5px;">⚽ Střelci zápasu: <b>{strelci_zapas}</b></div>' if (is_closed and "Střelec" in zapas and zapas["Střelec"]) else ""
+        strel_info = f'<div style="font-size: 0.85em; color: #4CAF50; margin-top: 5px;">⚽ Střelci zápasu: <b>{strelci_zapas}</b></div>' if (is_closed and str(zapas.get("Střelec", "")) != "" and zapas["Střelec"] != "nan") else ""
         
-        # Vykreslení karty
         st.markdown(f"""
             <div style="background-color: {bg_color}; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; color: white; margin-top: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="width: 40%; text-align: left; font-weight:bold; font-size: 1.1em;">{get_flag_html(zapas['Domaci'])} {zapas['Domaci']}</div>
                     <div style="width: 20%; text-align: center;">{middle_content}</div>
                     <div style="width: 40%; text-align: right; font-weight:bold; font-size: 1.1em;">{zapas['Hoste']} {get_flag_html(zapas['Hoste'])}</div>
-                </div>
-                {strel_info}
+                </div>{strel_info}
             </div>
         """, unsafe_allow_html=True)
+
+       
         
         with st.expander("Detaily a tipy"):
             c1, c2 = st.columns(2)
