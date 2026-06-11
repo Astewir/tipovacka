@@ -5,6 +5,7 @@ from datetime import datetime
 import hashlib
 import unicodedata
 from datetime import datetime
+import pytz  # Přidejte tento import
 
 # --- KONFIGURACE ---
 st.set_page_config(layout="wide")
