@@ -114,14 +114,42 @@ def calc_body(row):
     if z.empty: return 0
     z = z.iloc[0]
     body = 0
-    if not pd.isna(z['Skore_D']) and str(z['Skore_D']) != "":
-        if int(row['Tip_D']) == int(z['Skore_D']) and int(row['Tip_H']) == int(z['Skore_H']): body += 3
-        elif (int(row['Tip_D']) > int(row['Tip_H']) and int(z['Skore_D']) > int(z['Skore_H'])) or \
-             (int(row['Tip_D']) < int(row['Tip_H']) and int(z['Skore_D']) < int(z['Skore_H'])) or \
-             (int(row['Tip_D']) == int(row['Tip_H']) and int(z['Skore_D']) == int(z['Skore_H'])): body += 1
-    if "Střelec" in z and not pd.isna(z['Střelec']) and z['Střelec'] != "":
+    
+    # Funkce pro bezpečný převod na int
+    def safe_int(val):
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return 0
+
+    # Načtení hodnot
+    skore_d = safe_int(z.get('Skore_D'))
+    skore_h = safe_int(z.get('Skore_H'))
+    tip_d = safe_int(row.get('Tip_D'))
+    tip_h = safe_int(row.get('Tip_H'))
+    
+    # 1. Body za výsledek
+    if str(z.get('Skore_D', '')) != "":
+        # Přesný zásah (3 body)
+        if tip_d == skore_d and tip_h == skore_h:
+            body += 3
+            # Bonusový bod za 0:0
+            if skore_d == 0 and skore_h == 0:
+                body += 1
+        # Správný tip (výhra/remíza) (1 bod)
+        elif (tip_d > tip_h and skore_d > skore_h) or \
+             (tip_d < tip_h and skore_d < skore_h) or \
+             (tip_d == tip_h and skore_d == skore_h):
+            body += 1
+            
+    # 2. Body za střelce (počítá se pouze pokud není 0:0)
+    je_vysledek_00 = (skore_d == 0 and skore_h == 0)
+    if not je_vysledek_00 and "Střelec" in z and not pd.isna(z['Střelec']) and z['Střelec'] != "":
         skutecni_strelci = [remove_accents(s) for s in str(z['Střelec']).split(",")]
-        if remove_accents(str(row.get('Střelec', ''))) in skutecni_strelci: body += 1
+        tipovany_strelec = remove_accents(str(row.get('Střelec', '')))
+        if tipovany_strelec != "" and tipovany_strelec in skutecni_strelci: 
+            body += 1
+            
     return body
 
 if not df_tipy.empty and 'Skore_D' in df_zapas.columns:
