@@ -204,35 +204,22 @@ with st.popover("📊"):
 col_main, col_side = st.columns([2.5, 1])
 
 with col_main:
-    last_date = None
+    # 1. Příprava dat
     df_zapas['DateTime'] = pd.to_datetime(df_zapas['DateTime'])
-    for _, zapas in df_zapas.iterrows():
-        if zapas['Datum'] != last_date:
-            st.markdown(f'<div style="text-align: center; margin: 30px 0 20px 0; color: #4CAF50; font-weight: bold; display: flex; align-items: center;"><div style="flex: 1; height: 1px; background: #444;"></div><div style="padding: 0 15px; color: #aaa;">{zapas["Datum"]}</div><div style="flex: 1; height: 1px; background: #444;"></div></div>', unsafe_allow_html=True)
-            last_date = zapas['Datum']
-        
-       # 1. Čas s ošetřením časové zóny (posun na ČR čas)
-        # datetime.utcnow() je čas serveru, + 2 hodiny dává náš letní čas
+    mask_dohrane = df_zapas['Skore_D'].notna() & (df_zapas['Skore_D'].astype(str) != "") & (df_zapas['Skore_D'].astype(str) != "nan")
+    df_dohrane = df_zapas[mask_dohrane].sort_values('DateTime', ascending=False)
+    df_nedohrane = df_zapas[~mask_dohrane].sort_values('DateTime', ascending=True)
+
+    # 2. Definice pomocné funkce pro vykreslení zápasu (aby se kód neopakoval)
+    def render_zapas(zapas):
         aktualni_cas = datetime.utcnow() + timedelta(hours=2)
         zapas_dt = pd.to_datetime(zapas['DateTime'])
         is_closed = aktualni_cas > zapas_dt
-
-        # 2. Logika pro prostřední obsah
         skore_zadane = str(zapas.get('Skore_D', '')).strip() not in ["", "0", "None", "nan", 0]
         
-        if is_closed and skore_zadane:
-            middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>'
-        elif is_closed:
-            middle_content = f'<div style="font-size:12px; font-weight:bold; color:#FFD700; text-transform: uppercase;">PRÁVĚ SE HRAJE</div>'
-        else:
-            middle_content = f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>'
-
-        # 3. Barvy a vykreslení
-        border_color = "#e74c3c" if is_closed else "#2ecc71"
-        bg_color = "#1a0a0a" if is_closed else "#1e1e1e"
-        
-        strelci_zapas = str(zapas.get("Střelec", "")).replace(",", ", ")
-        strel_info = f'<div style="font-size: 0.85em; color: #4CAF50; margin-top: 5px;">⚽ Střelci zápasu: <b>{strelci_zapas}</b></div>' if (is_closed and str(zapas.get("Střelec", "")) != "" and zapas["Střelec"] != "nan") else ""
+        middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>' if (is_closed and skore_zadane) else (f'<div style="font-size:12px; font-weight:bold; color:#FFD700; text-transform: uppercase;">PRÁVĚ SE HRAJE</div>' if is_closed else f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>')
+        border_color, bg_color = ("#e74c3c", "#1a0a0a") if is_closed else ("#2ecc71", "#1e1e1e")
+        strel_info = f'<div style="font-size: 0.85em; color: #4CAF50; margin-top: 5px;">⚽ Střelci: <b>{str(zapas.get("Střelec", "")).replace(",", ", ")}</b></div>' if (is_closed and str(zapas.get("Střelec", "")) != "" and str(zapas.get("Střelec", "")) != "nan") else ""
         
         st.markdown(f"""
             <div style="background-color: {bg_color}; padding: 15px; border-radius: 8px 8px 0 0; border-bottom: 4px solid {border_color}; color: white; margin-top: 15px;">
@@ -243,8 +230,6 @@ with col_main:
                 </div>{strel_info}
             </div>
         """, unsafe_allow_html=True)
-
-       
         
         with st.expander("Detaily a tipy"):
             c1, c2 = st.columns(2)
@@ -256,43 +241,36 @@ with col_main:
                         t1, t2 = st.columns(2)
                         td = t1.number_input("Góly D", 0, key=f"d_{zapas['ID']}")
                         th = t2.number_input("Góly H", 0, key=f"h_{zapas['ID']}")
-                        
-                        domaci_clean = str(zapas['Domaci']).strip().lower()
-                        hoste_clean = str(zapas['Hoste']).strip().lower()
-                        hraci_df = df_soupisky[df_soupisky['Tým_Clean'].isin([domaci_clean, hoste_clean])]
-                        
-                        moznosti = [
-                                        f"({get_pozice_label(r)}) {r['Hráč']} ({r['Tým']})".replace("()", "") 
-                                        for _, r in hraci_df.iterrows() 
-                                        if get_pozice_label(r) != "B"
-                                    ]
-                        
+                        hraci_df = df_soupisky[df_soupisky['Tým_Clean'].isin([str(zapas['Domaci']).strip().lower(), str(zapas['Hoste']).strip().lower()])]
+                        moznosti = [f"({get_pozice_label(r)}) {r['Hráč']} ({r['Tým']})".replace("()", "") for _, r in hraci_df.iterrows() if get_pozice_label(r) != "B"]
                         vyber_strelec = st.selectbox("Tip na střelce:", moznosti, key=f"s_{zapas['ID']}")
-                        
                         if st.form_submit_button("ULOŽIT TIP"):
-                            # LOGIKA: Pokud je výsledek 0:0, střelec bude prázdný
-                            if td == 0 and th == 0:
-                                ciste_jmeno = ""
-                            else:
-                                ciste_jmeno = vyber_strelec[vyber_strelec.find(")")+2:] if ")" in vyber_strelec else vyber_strelec
-                            
+                            ciste_jmeno = "" if (td == 0 and th == 0) else (vyber_strelec[vyber_strelec.find(")")+2:] if ")" in vyber_strelec else vyber_strelec)
                             ws = get_gspread_client().open("MS2026_Tipovacka").worksheet("Tipy")
                             exist = df_tipy[(df_tipy['ID_Zapasu'] == zapas['ID']) & (df_tipy['Jméno'] == user)]
-                            
-                            if not exist.empty: 
-                                ws.update(f"C{exist.index[0]+2}:E{exist.index[0]+2}", [[td, th, ciste_jmeno]])
-                            else: 
-                                ws.append_row([user, zapas['ID'], td, th, ciste_jmeno])
-                            
-                            st.balloons()
-                            st.success(f"Tip pro {user} uložen! Hodně štěstí!")
-                            st.cache_data.clear()
-                            st.rerun()
+                            if not exist.empty: ws.update(f"C{exist.index[0]+2}:E{exist.index[0]+2}", [[td, th, ciste_jmeno]])
+                            else: ws.append_row([user, zapas['ID'], td, th, ciste_jmeno])
+                            st.cache_data.clear(); st.rerun()
             with c2:
                 st.markdown("<h5 style='margin-bottom: 15px;'>👥 Tipy ostatních</h5>", unsafe_allow_html=True)
                 for _, tip in df_tipy[df_tipy['ID_Zapasu'] == zapas['ID']].iterrows():
                     user_color = get_user_color(tip['Jméno'])
                     st.markdown(f'<div style="background-color: #262730; padding: 10px 15px; margin-bottom: 8px; border-radius: 10px; border-left: 4px solid {user_color};"><div style="display: flex; justify-content: space-between;"><span style="font-weight: 500; color: {user_color};">{tip["Jméno"]}</span><span>{tip["Tip_D"]} : {tip["Tip_H"]}</span></div><div style="font-size: 0.8em; color: #aaa;">⚽ Střelec: {str(tip.get("Střelec", "Nezadáno")).replace(",", ", ")}</div></div>', unsafe_allow_html=True)
+
+    # 3. Vykreslení Tabů
+    tab1, tab2 = st.tabs(["📅 Nedohrané zápasy", "🏁 Odehrané zápasy"])
+    
+    with tab1:
+        last_date = None
+        for _, zapas in df_nedohrane.iterrows():
+            if zapas['Datum'] != last_date:
+                st.markdown(f'<div style="text-align: center; margin: 20px 0; color: #4CAF50; font-weight: bold;">{zapas["Datum"]}</div>', unsafe_allow_html=True)
+                last_date = zapas['Datum']
+            render_zapas(zapas)
+            
+    with tab2:
+        for _, zapas in df_dohrane.iterrows():
+            render_zapas(zapas)
 
 with col_side:
     st.subheader("🏆 Pořadí")
