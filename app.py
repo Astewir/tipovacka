@@ -215,7 +215,9 @@ with col_main:
         aktualni_cas = datetime.utcnow() + timedelta(hours=2)
         zapas_dt = pd.to_datetime(zapas['DateTime'])
         is_closed = aktualni_cas > zapas_dt
-        skore_zadane = str(zapas.get('Skore_D', '')).strip() not in ["", "0", "None", "nan", 0]
+        skore_d_val = str(zapas.get('Skore_D', '')).strip()
+        skore_h_val = str(zapas.get('Skore_H', '')).strip()
+        skore_zadane = (skore_d_val not in ["", "None", "nan"]) and (skore_h_val not in ["", "None", "nan"])
         
         middle_content = f'<div style="font-size:24px; font-weight:bold; color:#fff;">{zapas["Skore_D"]} : {zapas["Skore_H"]}</div>' if (is_closed and skore_zadane) else (f'<div style="font-size:12px; font-weight:bold; color:#FFD700; text-transform: uppercase;">PRÁVĚ SE HRAJE</div>' if is_closed else f'<div style="font-size:18px; font-weight:bold; color:#fff;">{zapas["Cas"]}</div>')
         border_color, bg_color = ("#e74c3c", "#1a0a0a") if is_closed else ("#2ecc71", "#1e1e1e")
