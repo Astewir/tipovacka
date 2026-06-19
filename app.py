@@ -80,7 +80,7 @@ if query_user and query_user in df_uzivatele["Jméno"].tolist():
     st.query_params.clear()
     st.rerun()
 
-FOTKY_UZIVATELU = {"Vojtin": "static/images/vojtin.jpg", "Terezka": "static/images/terezka.jpg", "Kačaba": "static/images/kacaba.jpg", "Lukáš": "static/images/lukas.jpg", "Mladej Tono": "static/images/mladejtono.jpg", "Míša": "static/images/misa.jpg", "Džáma":  "static/images/dzama.jpg", "Starší Tono": "static/images/starsitono.jpg"}
+FOTKY_UZIVATELU = {"Vojtin": "static/images/Vojtin.jpg", "Terezka": "static/images/Terezka.jpg", "Kačaba": "static/images/kacaba.jpg", "Lukáš": "static/images/lukas.jpg", "Mladej Tono": "static/images/mladejtono.jpg", "Míša": "static/images/misa.jpg", "Džáma":  "static/images/dzama.jpg", "Starší Tono": "static/images/starsitono.jpg"}
 
 # --- PŘIHLAŠOVACÍ BLOK ---
 if 'jmeno_hrace' not in st.session_state:
