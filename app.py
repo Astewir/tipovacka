@@ -84,7 +84,7 @@ FOTKY_UZIVATELU = {"Vojtin": "static/images/Vojtin.jpg", "Terezka": "static/imag
 
 # --- PŘIHLAŠOVACÍ BLOK ---
 if 'jmeno_hrace' not in st.session_state:
-    st.markdown("<h1 style='text-align: center; color: #4CAF50;'>Kdo si právě tipuje?</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #4CAF50;'>Kdo si právě tipuje?</h3>", unsafe_allow_html=True)
 
     # --- PŘIDANÝ POPOVER PRO MOBILNÍ ZOBRAZENÍ POŘADÍ ---
     with st.popover("📊 Průběžné pořadí"):
