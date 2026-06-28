@@ -55,7 +55,7 @@ def get_body_pavouk(jmeno, df_pavouk, df_realne):
 
 PARY = {"Terezka": "Vojtin", "Vojtin": "Terezka", "Mladej Tono": "Míša", "Míša": "Mladej Tono", "Lukáš": "Kačaba", "Kačaba": "Lukáš", "Starší Tono":"Džáma", "Džáma":"Starší Tono"}
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=360)
 def load_data_frames():
     client = get_gspread_client()
     sh = client.open("MS2026_Tipovacka")
