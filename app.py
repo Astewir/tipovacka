@@ -223,34 +223,96 @@ with col_main:
     
     if st.session_state.faze == "Play-off":
         with tab3:
+            # 1. ČASOVÝ LIMIT
+            uzavirka = datetime(2026, 6, 28, 21, 00, tzinfo=pytz.timezone('Europe/Prague'))
+            nyni = datetime.now(pytz.timezone('Europe/Prague'))
+            lze_editovat = nyni < uzavirka
+
             st.write("### Aktuální pavouk turnaje")
             if os.path.exists("static/images/pavouk.png"):
                 st.image("static/images/pavouk.png", use_container_width=True)
-            else:
-                st.warning("Obrázek pavouka nebyl nalezen ve složce static/images/pavouk.png")
-
+            
             st.write(f"### Tvoje tipy na pavouka ({st.session_state.jmeno_hrace})")
-            body_pavouk = get_body_pavouk(st.session_state.jmeno_hrace, df_pavouk, df_realne)
-            st.info(f"Aktuální body za pavouka: {body_pavouk}")
             
-            df_pavouk_user = df_pavouk[df_pavouk['Jméno'] == st.session_state.jmeno_hrace]
-            st.dataframe(df_pavouk_user, use_container_width=True)
+            if not lze_editovat:
+                st.warning("⏰ Tipování pavouka bylo uzavřeno 28.6.2026.")
+            else:
+                st.info(f"✅ Tipy můžeš upravovat do {uzavirka.strftime('%d.%m.%Y %H:%M')}")
+
+            # 2. INTERAKTIVNÍ TABULKA
+            df_pavouk_user = df_pavouk[df_pavouk['Jméno'] == st.session_state.jmeno_hrace].copy()
             
-            st.write("#### Přidat nový tip:")
-            tymy_v_po = df_tymy_po['Tým'].unique().tolist()
-            tipovane_tymy = df_pavouk_user['Tým'].tolist()
-            dostupne_tymy = [t for t in tymy_v_po if t not in tipovane_tymy]
-            
-            with st.form("pavouk_form"):
-                tym = st.selectbox("Vyber tým", sorted(dostupne_tymy))
-                faze = st.selectbox("Fáze", ["16-finále", "Osmifinále", "Čtvrtfinále", "Semifinále", "Finále", "Vítěz"])
-                if st.form_submit_button("Uložit tip na pavouka"):
-                    get_gspread_client().open("MS2026_Tipovacka").worksheet("Pavouk").append_row([st.session_state.jmeno_hrace, tym, faze])
-                    st.cache_data.clear(); st.rerun()
+            # Editor povolen jen pokud je před uzávěrkou
+            edited_df = st.data_editor(
+                df_pavouk_user[['Tým', 'Tip_Faze']], 
+                disabled=not lze_editovat,
+                use_container_width=True,
+                key="editor_pavouk",
+                column_config={
+                    "Tip_Faze": st.column_config.SelectboxColumn(
+                        "Tip_Faze",
+                        help="Vyber fázi, ve které tým vypadne",
+                        options=["16-finále", "Osmifinále", "Čtvrtfinále", "Semifinále", "Finále", "Vítěz"],
+                        required=True,
+                    )
+                }
+            )
+
+            if lze_editovat and not edited_df.equals(df_pavouk_user[['Tým', 'Tip_Faze']]):
+                if st.button("Uložit změny v tabulce"):
+                    # Přepíšeme pouze řádky tohoto hráče v Google Sheetu
+                    ws = get_gspread_client().open("MS2026_Tipovacka").worksheet("Pavouk")
+                    all_data = ws.get_all_values()
+                    
+                    # Filtrujeme data: ponecháme všechny kromě aktuálního hráče
+                    new_data = [row for row in all_data[1:] if row[0] != st.session_state.jmeno_hrace]
+                    
+                    # Přidáme upravené řádky hráče zpět
+                    for _, row in edited_df.iterrows():
+                        new_data.append([st.session_state.jmeno_hrace, row['Tým'], row['Tip_Faze'], 0])
+                    
+                    # Přepis listu
+                    ws.clear()
+                    ws.append_row(["Jméno", "Tým", "Tip_Faze", "Body"])
+                    if new_data: # Pokud tam něco zbylo
+                        ws.append_rows(new_data)
+                    
+                    st.success("Tipy byly úspěšně uloženy!")
+                    st.cache_data.clear()
+                    st.rerun()
+
+            # 3. FORMULÁŘ PRO NOVÝ TIP
+            if lze_editovat:
+                with st.expander("➕ Přidat nový tip do pavouka"):
+                    tymy_v_po = df_tymy_po['Tým'].unique().tolist()
+                    tipovane_tymy = df_pavouk_user['Tým'].tolist()
+                    dostupne_tymy = [t for t in tymy_v_po if t not in tipovane_tymy]
+                    
+                    with st.form("pavouk_form"):
+                        tym = st.selectbox("Vyber tým", sorted(dostupne_tymy))
+                        faze = st.selectbox("Tip_Faze", ["16-finále", "Osmifinále", "Čtvrtfinále", "Semifinále", "Finále", "Vítěz"])
+                        if st.form_submit_button("Uložit nový tip"):
+                            get_gspread_client().open("MS2026_Tipovacka").worksheet("Pavouk").append_row([st.session_state.jmeno_hrace, tym, faze, 0])
+                            st.cache_data.clear(); st.rerun()
 
 with col_side:
     st.subheader("🏆 Pořadí")
-    lb = df_tipy.groupby('Jméno')['Body'].sum().sort_values(ascending=False).reset_index()
+    
+    # 1. Spočítáme body ze zápasů
+    df_po = df_tipy.groupby('Jméno')['Body'].sum().reset_index()
+    
+    # 2. Pokud jsme v režimu Play-off, přičteme body za pavouka každému hráči
+    if st.session_state.faze == "Play-off":
+        for index, row in df_po.iterrows():
+            jmeno = row['Jméno']
+            body_p = get_body_pavouk(jmeno, df_pavouk, df_realne)
+            # Přičteme body za pavouka k celkovým bodům
+            df_po.at[index, 'Body'] += body_p
+    
+    # 3. Seřadíme podle výsledného součtu
+    lb = df_po.sort_values('Body', ascending=False).reset_index(drop=True)
+    
+    # 4. Vykreslíme
     for i, row in lb.iterrows():
         medal = {0: "🥇", 1: "🥈", 2: "🥉"}.get(i, "👤")
         st.markdown(f'<div class="lb-row"><div class="lb-rank">{medal}</div><div class="lb-name">{row["Jméno"]}</div><div class="lb-points">{int(row["Body"])} b</div></div>', unsafe_allow_html=True)
