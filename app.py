@@ -78,7 +78,7 @@ if query_user and query_user in df_uzivatele["Jméno"].tolist():
     st.query_params.clear()
     st.rerun()
 
-FOTKY_UZIVATELU = {"Vojtin": "static/images/vojtin.jpg", "Terezka": "static/images/terezka.jpg", "Kačaba": "static/images/kacaba.jpg", "Lukáš": "static/images/lukas.jpg", "Mladej Tono": "static/images/mladejtono.jpg", "Míša": "static/images/misa.jpg", "Džáma":  "static/images/dzama.jpg", "Starší Tono": "static/images/starsitono.jpg"}
+FOTKY_UZIVATELU = {"Vojtin": "static/images/Vojtin.jpg", "Terezka": "static/images/Terezka.jpg", "Kačaba": "static/images/kacaba.jpg", "Lukáš": "static/images/lukas.jpg", "Mladej Tono": "static/images/mladejtono.jpg", "Míša": "static/images/misa.jpg", "Džáma":  "static/images/dzama.jpg", "Starší Tono": "static/images/starsitono.jpg"}
 
 if 'jmeno_hrace' not in st.session_state:
     st.markdown("<h1 style='text-align: center; color: #4CAF50;'>Kdo si právě tipuje?</h1>", unsafe_allow_html=True)
