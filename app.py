@@ -224,7 +224,7 @@ with col_main:
     if st.session_state.faze == "Play-off":
         with tab3:
             # 1. ČASOVÝ LIMIT
-            uzavirka = datetime(2026, 6, 29, 21, 00, tzinfo=pytz.timezone('Europe/Prague'))
+            uzavirka = datetime(2026, 6, 28, 21, 00, tzinfo=pytz.timezone('Europe/Prague'))
             nyni = datetime.now(pytz.timezone('Europe/Prague'))
             lze_editovat = nyni < uzavirka
 
